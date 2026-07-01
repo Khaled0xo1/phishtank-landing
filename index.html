@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhishTank — AI-Enhanced Email Phishing Detection</title>
+  <meta name="description" content="PhishTank is a multi-layer AI system for detecting phishing emails through body analysis, URL analysis, header inspection, OCR, QR decoding, and weighted probabilistic fusion." />
+  <style>
+    :root {
+      --navy: #081052;
+      --navy-2: #11186e;
+      --deep: #020624;
+      --orange: #ff6b00;
+      --orange-2: #ff8a2c;
+      --cream: #fff7ef;
+      --paper: #ffffff;
+      --muted: #6b7280;
+      --line: rgba(8, 16, 82, 0.13);
+      --green: #16a34a;
+      --amber: #f59e0b;
+      --red: #dc2626;
+      --shadow: 0 24px 80px rgba(8, 16, 82, 0.16);
+      --radius-lg: 28px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+      --max: 1180px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--navy);
+      background:
+        radial-gradient(circle at top left, rgba(255, 107, 0, 0.13), transparent 32rem),
+        radial-gradient(circle at 85% 10%, rgba(8, 16, 82, 0.18), transparent 32rem),
+        linear-gradient(180deg, #ffffff 0%, #f7f8ff 45%, #fff7ef 100%);
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    .container { width: min(var(--max), calc(100% - 40px)); margin: 0 auto; }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; min-height: 74px; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 900; letter-spacing: -0.03em; }
+    .brand-mark {
+      width: 58px; height: 58px; display: grid; place-items: center;
+      border-radius: 18px; overflow: hidden;
+      background: #fff;
+      border: 1px solid rgba(8, 16, 82, 0.10);
+      box-shadow: 0 12px 30px rgba(8, 16, 82, 0.12);
+      flex: 0 0 auto;
+    }
+    .brand-mark img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .brand small { display: block; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .brand span { font-size: 22px; }
+    .brand .orange { color: var(--orange); }
+    .nav-links { display: flex; gap: 24px; align-items: center; color: #222a6b; font-size: 14px; font-weight: 800; }
+    .nav-cta { padding: 11px 16px; border-radius: 999px; background: var(--navy); color: white; box-shadow: 0 10px 24px rgba(8, 16, 82, 0.18); }
+
+    .hero { padding: 74px 0 44px; overflow: hidden; }
+    .hero-grid { display: grid; grid-template-columns: 1.03fr 0.97fr; gap: 44px; align-items: center; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; padding: 8px 13px; border-radius: 999px; background: rgba(255, 107, 0, 0.1); color: var(--orange); font-weight: 900; letter-spacing: .08em; font-size: 12px; text-transform: uppercase; }
+    .eyebrow::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 7px rgba(255, 107, 0, .12); }
+    h1 { margin: 20px 0 18px; font-size: clamp(46px, 7vw, 92px); line-height: 0.93; letter-spacing: -0.075em; color: var(--navy); }
+    .hero h1 strong { color: var(--orange); font-weight: 950; }
+    .lead { font-size: clamp(18px, 2.4vw, 22px); color: #26306d; max-width: 660px; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 32px; }
+    .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 19px; border-radius: 999px; font-weight: 900; transition: transform .2s ease, box-shadow .2s ease; }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary { background: var(--orange); color: white; box-shadow: 0 18px 35px rgba(255, 107, 0, 0.28); }
+    .btn-secondary { background: white; color: var(--navy); border: 1px solid var(--line); box-shadow: 0 12px 30px rgba(8, 16, 82, 0.08); }
+
+    .hero-card {
+      position: relative;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.72));
+      border: 1px solid rgba(255, 255, 255, .8);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .poster-wrap { border-radius: 22px; overflow: hidden; border: 2px solid #0c155d; background: white; }
+    .poster-wrap img { width: 100%; display: block; }
+    .floating-kpi {
+      position: absolute; right: -10px; bottom: -18px; width: 210px;
+      background: var(--navy); color: white; padding: 18px; border-radius: 22px;
+      box-shadow: 0 25px 55px rgba(8, 16, 82, .28); border: 1px solid rgba(255,255,255,.2);
+    }
+    .floating-kpi .big { font-size: 40px; font-weight: 950; line-height: 1; color: var(--orange-2); }
+    .floating-kpi p { margin: 8px 0 0; font-size: 13px; color: rgba(255,255,255,.82); }
+
+    .section { padding: 86px 0; }
+    .section-head { text-align: center; max-width: 790px; margin: 0 auto 42px; }
+    .section-kicker { color: var(--orange); text-transform: uppercase; letter-spacing: .13em; font-size: 12px; font-weight: 950; }
+    h2 { margin: 10px 0 12px; font-size: clamp(34px, 4vw, 54px); line-height: 1.04; letter-spacing: -0.055em; color: var(--navy); }
+    .section-head p { color: #394176; font-size: 18px; margin: 0; }
+
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .card { background: rgba(255,255,255,.86); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 24px; box-shadow: 0 16px 50px rgba(8, 16, 82, .07); }
+    .icon { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; background: rgba(255,107,0,.12); color: var(--orange); font-size: 24px; margin-bottom: 14px; }
+    .card h3 { margin: 0 0 9px; font-size: 21px; line-height: 1.2; letter-spacing: -0.02em; }
+    .card p { color: #48507f; margin: 0; }
+
+    .problem-solution { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .panel-dark { background: linear-gradient(145deg, var(--navy), #050930); color: white; border: 1px solid rgba(255,255,255,.12); }
+    .panel-dark h3, .panel-dark h2 { color: white; }
+    .panel-dark p, .panel-dark li { color: rgba(255,255,255,.78); }
+    .bullet-list { display: grid; gap: 12px; padding: 0; margin: 18px 0 0; list-style: none; }
+    .bullet-list li { display: flex; gap: 11px; align-items: flex-start; }
+    .dot { width: 9px; height: 9px; margin-top: 8px; border-radius: 50%; background: var(--orange); flex: 0 0 auto; }
+
+    .architecture {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .arch-row { display: grid; grid-template-columns: repeat(5, 1fr); align-items: stretch; gap: 14px; position: relative; }
+    .arch-node { min-height: 140px; padding: 18px; border-radius: 20px; background: linear-gradient(180deg, #ffffff, #f7f8ff); border: 1px solid rgba(8,16,82,.15); display: flex; flex-direction: column; justify-content: center; position: relative; }
+    .arch-node::after { content: "→"; position: absolute; right: -17px; top: 50%; transform: translateY(-50%); color: var(--orange); font-size: 28px; font-weight: 950; z-index: 2; }
+    .arch-node:last-child::after { display: none; }
+    .arch-num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--navy); color: white; font-size: 13px; font-weight: 900; margin-bottom: 12px; }
+    .arch-node h3 { margin: 0 0 8px; font-size: 17px; }
+    .arch-node p { margin: 0; color: #596087; font-size: 14px; }
+    .model-lanes { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .lane { background: #fff7ef; border: 1px solid rgba(255,107,0,.22); color: #7b2b00; border-radius: 17px; padding: 16px; text-align: center; font-weight: 900; }
+
+    .routing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+    .json-card pre { margin: 0; white-space: pre-wrap; font-size: 13px; line-height: 1.65; color: #e8efff; }
+    .json-card { background: #050930; border-radius: 24px; padding: 22px; border: 1px solid rgba(255,255,255,.14); box-shadow: var(--shadow); overflow: auto; }
+    .route-list { display: grid; gap: 14px; }
+    .route { display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: center; padding: 16px; border-radius: 18px; background: white; border: 1px solid var(--line); }
+    .route-icon { width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: white; background: linear-gradient(145deg, var(--navy), var(--orange)); }
+    .route h3 { margin: 0; font-size: 17px; }
+    .route p { margin: 2px 0 0; color: #596087; font-size: 14px; }
+
+    .module-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .module { position: relative; overflow: hidden; min-height: 250px; }
+    .module::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 5px; background: linear-gradient(90deg, var(--navy), var(--orange)); }
+    .tag { display: inline-flex; align-items: center; padding: 5px 9px; border-radius: 999px; background: rgba(8,16,82,.08); color: var(--navy); font-size: 12px; font-weight: 900; margin-bottom: 12px; }
+    .module-media {
+      margin: 10px 0 14px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(8,16,82,.12);
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(8,16,82,.06);
+    }
+    .module-media img {
+      width: 100%;
+      display: block;
+    }
+    .module ul { margin: 14px 0 0; padding-left: 18px; color: #48507f; }
+
+    .fusion-shell { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: center; }
+    .equation { background: linear-gradient(145deg, var(--navy), #050930); border-radius: 30px; color: white; padding: 32px; box-shadow: var(--shadow); }
+    .equation code { display: block; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.13); border-radius: 18px; padding: 16px; color: white; font-size: clamp(16px, 2vw, 22px); line-height: 1.8; white-space: pre-wrap; }
+    .thresholds { display: grid; gap: 14px; }
+    .threshold { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; background: white; border: 1px solid var(--line); border-radius: 20px; padding: 16px; }
+    .pill { text-align: center; color: white; border-radius: 999px; padding: 9px 10px; font-weight: 950; }
+    .safe { background: var(--green); }
+    .sus { background: var(--amber); }
+    .mal { background: var(--red); }
+    .threshold strong { display: block; }
+    .threshold span { color: #596087; }
+
+    .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .metric { padding: 24px; border-radius: 24px; background: white; border: 1px solid var(--line); box-shadow: 0 16px 50px rgba(8,16,82,.07); }
+    .metric-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+    .metric h3 { margin: 0; font-size: 18px; }
+    .metric .value { color: var(--orange); font-size: 34px; line-height: 1; font-weight: 950; letter-spacing: -0.04em; }
+    .metric p { margin: 0; color: #596087; font-size: 14px; }
+    .bar { height: 10px; background: #edf0f9; border-radius: 999px; overflow: hidden; margin-top: 16px; }
+    .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--navy), var(--orange)); border-radius: 999px; }
+    .note-card { grid-column: 1 / -1; background: #fff7ef; border-color: rgba(255,107,0,.22); color: #7b2b00; }
+
+    .dashboard-shot {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      overflow: hidden;
+    }
+    .dashboard-shot img {
+      width: 100%;
+      display: block;
+      border-radius: 22px;
+      border: 1px solid rgba(8,16,82,.10);
+    }
+    .dashboard-caption {
+      margin-top: 14px;
+      color: #596087;
+      font-size: 14px;
+      text-align: center;
+    }
+    .dashboard-gallery {
+      display: grid;
+      gap: 22px;
+    }
+
+    .tech-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .tech { padding: 11px 14px; border-radius: 999px; background: white; border: 1px solid var(--line); color: #30386f; font-weight: 850; box-shadow: 0 10px 28px rgba(8,16,82,.05); }
+
+    .footer { background: var(--deep); color: white; padding: 54px 0; }
+    .footer-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 24px; align-items: center; }
+    .footer h2 { color: white; margin-top: 0; }
+    .footer p { color: rgba(255,255,255,.72); }
+    .footer-card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 22px; padding: 22px; }
+    .mini { font-size: 13px; color: rgba(255,255,255,.62); }
+
+    [data-reveal] { opacity: 0; transform: translateY(22px); transition: opacity .75s ease, transform .75s ease; }
+    [data-reveal].show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 980px) {
+      .hero-grid, .problem-solution, .routing-grid, .fusion-shell, .footer-grid { grid-template-columns: 1fr; }
+      .cards, .results-grid { grid-template-columns: 1fr 1fr; }
+      .module-grid { grid-template-columns: 1fr 1fr; }
+      .arch-row { grid-template-columns: 1fr; }
+      .arch-node::after { content: "↓"; right: 50%; top: auto; bottom: -25px; transform: translateX(50%); }
+      .floating-kpi { position: static; width: auto; margin-top: 12px; }
+    }
+    @media (max-width: 720px) {
+      .nav-links { display: none; }
+      .cards, .results-grid, .module-grid, .model-lanes { grid-template-columns: 1fr; }
+      .container { width: min(100% - 26px, var(--max)); }
+      .section { padding: 64px 0; }
+      .threshold { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="#top" class="brand" aria-label="PhishTank home">
+        <div class="brand-mark"><img src="assets/logo_shield.png" alt="PhishTank shield logo" /></div>
+        <div><small>Networks & Cyber Security</small><span>Phish<strong class="orange">Tank</strong></span></div>
+      </a>
+      <div class="nav-links">
+        <a href="#architecture">Architecture</a>
+        <a href="#modules">Modules</a>
+        <a href="#results">Results</a>
+        <a href="#dashboard">Dashboard</a>
+        <a href="#fusion" class="nav-cta">Fusion Logic</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="container hero-grid">
+      <div data-reveal>
+        <span class="eyebrow">AI-enhanced email phishing defense</span>
+        <h1>One email. <br />Many signals. <br /><strong>One decision.</strong></h1>
+        <p class="lead">PhishTank analyzes the full email attack surface — body text, headers, URLs, attachments, OCR-hidden text, PDF links, and QR codes — then combines model probabilities into a clear Safe, Suspicious, or Malicious verdict.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#architecture">Explore the system →</a>
+          <a class="btn btn-secondary" href="#results">View results</a>
+        </div>
+      </div>
+      <div class="hero-card" data-reveal>
+        <div class="poster-wrap"><img src="assets/phishtank_poster.png" alt="PhishTank graduation project poster" /></div>
+        <div class="floating-kpi"><div class="big">Multi-layer</div><p>Designed to catch phishing evidence hidden across text, links, headers, images, PDFs, and QR codes.</p></div>
+      </div>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <div class="section-kicker">Purpose</div>
+        <h2>Why PhishTank exists</h2>
+        <p>Modern phishing is no longer only a suspicious message body. Attackers distribute evidence across headers, hidden links, visual attachments, multilingual text, and QR codes to bypass single-layer filters.</p>
+      </div>
+      <div class="problem-solution">
+        <div class="card panel-dark" data-reveal>
+          <div class="icon">⚠</div>
+          <h3>The problem</h3>
+          <ul class="bullet-list">
+            <li><span class="dot"></span><span>Body-only detection can miss malicious URLs, spoofed headers, or visual attachments.</span></li>
+            <li><span class="dot"></span><span>URL-only detection misses social engineering and legitimate-looking but dangerous messages.</span></li>
+            <li><span class="dot"></span><span>Arabic and multilingual emails need translation-aware processing.</span></li>
+            <li><span class="dot"></span><span>QR codes and PDF/image attachments can hide the actual payload.</span></li>
+          </ul>
+        </div>
+        <div class="card" data-reveal>
+          <div class="icon">🛡</div>
+          <h3>The solution</h3>
+          <ul class="bullet-list">
+            <li><span class="dot"></span><span>Extract clean, structured evidence from every email through IMAP, MIME parsing, OCR, and QR decoding.</span></li>
+            <li><span class="dot"></span><span>Route each evidence type to the correct model instead of sending everything everywhere.</span></li>
+            <li><span class="dot"></span><span>Fuse model probabilities so one dangerous attachment or link can raise the final risk.</span></li>
+            <li><span class="dot"></span><span>Show the admin final verdicts, component scores, evidence traceability, and system health.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="architecture">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <div class="section-kicker">Architecture</div>
+        <h2>Collect → Extract → Route → Analyze → Fuse → Decide</h2>
+        <p>The system is modular and can run across devices. The parser/OCR device creates the evidence JSON, while model services return probabilities to the dashboard and fusion layer.</p>
+      </div>
+      <div class="architecture" data-reveal>
+        <div class="arch-row">
+          <div class="arch-node"><div class="arch-num">1</div><h3>External IMAP</h3><p>Raw mailbox source for incoming messages and attachments.</p></div>
+          <div class="arch-node"><div class="arch-num">2</div><h3>Parser + OCR + QR</h3><p>MIME parsing, visible text cleanup, PDF/image OCR, embedded PDF links, and QR decoding.</p></div>
+          <div class="arch-node"><div class="arch-num">3</div><h3>Evidence JSON</h3><p>Clean contract containing headers, body text, body URLs, OCR text, PDF links, and QR links.</p></div>
+          <div class="arch-node"><div class="arch-num">4</div><h3>Dashboard + Fusion</h3><p>Routes evidence, calls model APIs, collects scores, and calculates final probability.</p></div>
+          <div class="arch-node"><div class="arch-num">5</div><h3>Final Decision</h3><p>Safe, Suspicious, or Malicious with pass, review, or block workflow.</p></div>
+        </div>
+        <div class="model-lanes">
+          <div class="lane">Header Model ← header_features</div>
+          <div class="lane">NLP/BERT Model ← body_text + OCR text</div>
+          <div class="lane">URL Model ← body URLs + PDF links + QR links</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container routing-grid">
+      <div data-reveal>
+        <div class="section-kicker">Evidence contract</div>
+        <h2>Every email becomes clean JSON evidence</h2>
+        <p>The parser does not decide if an email is malicious. It prepares reliable evidence that downstream services can analyze independently.</p>
+        <div class="route-list">
+          <div class="route"><div class="route-icon">H</div><div><h3>Headers</h3><p>Authentication, routing, spoofing, sender consistency, and engineered features.</p></div></div>
+          <div class="route"><div class="route-icon">T</div><div><h3>Text</h3><p>Body text and each attachment OCR result are scanned separately by the NLP model.</p></div></div>
+          <div class="route"><div class="route-icon">U</div><div><h3>Links</h3><p>Body URLs, HTML anchor targets, PDF links, and QR links are routed to URL analysis.</p></div></div>
+        </div>
+      </div>
+      <div class="json-card" data-reveal>
+<pre>{
+  "email_id": "email_001",
+  "headers": {
+    "from": "...",
+    "to": "...",
+    "subject": "...",
+    "message_id": "..."
+  },
+  "header_features": { "...": 0 },
+  "body_text": "visible message text",
+  "body_urls": ["https://..."],
+  "attachments": [
+    {
+      "file_name": "invoice.pdf",
+      "type": "pdf",
+      "ocr_text": "text extracted by OCR",
+      "pdf_links": ["https://..."],
+      "qr_links": ["https://..."]
+    }
+  ]
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="modules">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <div class="section-kicker">Model layer</div>
+        <h2>Specialized modules for specialized evidence</h2>
+        <p>Each model receives only the evidence it understands. This improves traceability and prevents one blind spot from controlling the whole verdict.</p>
+      </div>
+      <div class="module-grid">
+        <article class="card module" data-reveal>
+          <span class="tag">Body / NLP</span>
+          <div class="module-media"><img src="assets/module_nlp_route.png" alt="NLP module routing diagram highlighting the dashboard route, fusion, and NLP service" /></div>
+          <h3>BERT semantic analysis</h3>
+          <p>Fine-tuned BERT analyzes body text and OCR text for phishing intent, urgency, impersonation, and suspicious wording.</p>
+          <ul><li>Scans body and OCR separately</li><li>LIME explainability support</li><li>Visible-text cleanup for HTML emails</li></ul>
+        </article>
+        <article class="card module" data-reveal>
+          <span class="tag">Arabic-aware</span>
+          <div class="module-media"><img src="assets/module_translation_pipeline.png" alt="Arabic email or OCR text pipeline through language detection, NLLB-200 translation, and BERT classification" /></div>
+          <h3>NLLB-200 translation</h3>
+          <p>Arabic and other supported non-English messages are translated to English before BERT classification while preserving URLs and emails.</p>
+          <ul><li>Language detection</li><li>Line-by-line translation</li><li>Security token preservation</li></ul>
+        </article>
+        <article class="card module" data-reveal>
+          <span class="tag">Header</span>
+          <div class="module-media"><img src="assets/module_header_route.png" alt="Header module routing diagram highlighting the header model path" /></div>
+          <h3>Metadata anomaly detection</h3>
+          <p>Header analysis studies SPF, DKIM, DMARC, Return-Path, routing, malformed fields, and sender-domain consistency.</p>
+          <ul><li>Language-independent evidence</li><li>Random Forest / Stacking experiments</li><li>FastAPI model endpoint</li></ul>
+        </article>
+        <article class="card module" data-reveal>
+          <span class="tag">URL</span>
+          <div class="module-media"><img src="assets/module_url_pipeline.png" alt="URL analysis pipeline from URLs to features to SelectKBest to soft voting and final risk score" /></div>
+          <h3>Static link risk scoring</h3>
+          <p>The URL service analyzes lexical and structural URL indicators without relying on webpage content execution.</p>
+          <ul><li>Body, PDF, OCR, and QR links</li><li>Logistic Regression + SVC + Decision Tree</li><li>Per-link phishing score</li></ul>
+        </article>
+        <article class="card module" data-reveal>
+          <span class="tag">OCR</span>
+          <div class="module-media"><img src="assets/module_ocr_qr.png" alt="Parser OCR diagram highlighting files, OCR/QR extraction, and JSON output" /></div>
+          <h3>DeepSeek-OCR-2 attachments</h3>
+          <p>Images and PDF pages are converted to OCR-ready images so hidden visual text becomes model-readable evidence.</p>
+          <ul><li>PNG, JPG, JPEG, PDF</li><li>Clean Markdown output</li><li>Attachment provenance</li></ul>
+        </article>
+        <article class="card module" data-reveal>
+          <span class="tag">QR / Quishing</span>
+          <div class="module-media"><img src="assets/module_qr_route.png" alt="QR and URL routing diagram highlighting the dashboard route and URL model destination" /></div>
+          <h3>QR payload extraction</h3>
+          <p>OpenCV QR decoding reveals QR URLs hidden in images or rasterized PDF pages, then routes them to URL analysis.</p>
+          <ul><li>Single and multi-code decoding</li><li>Duplicate removal</li><li>URL-only filtering</li></ul>
+        </article>
+        <article class="card module" data-reveal>
+          <span class="tag">Parser</span>
+          <div class="module-media"><img src="assets/module_parser_json.png" alt="Parser service diagram highlighting parser OCR processing and JSON evidence generation" /></div>
+          <h3>MIME and HTML cleanup</h3>
+          <p>The parser separates body text, headers, URLs, attachments, embedded PDF links, and HTML anchor targets.</p>
+          <ul><li>Preserves href targets</li><li>Does not mix attachments into body</li><li>Outputs one JSON per email</li></ul>
+        </article>
+        <article class="card module" data-reveal>
+          <span class="tag">Dashboard</span>
+          <div class="module-media"><img src="assets/module_dashboard_route.png" alt="Dashboard orchestration diagram highlighting dashboard routing to header, NLP, and URL services" /></div>
+          <h3>Security operations view</h3>
+          <p>The admin dashboard syncs parser output, calls model APIs, applies fusion, and presents final decisions and evidence.</p>
+          <ul><li>Counts and trend charts</li><li>Health checks</li><li>Pass / block workflow support</li></ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="fusion">
+    <div class="container fusion-shell">
+      <div class="equation" data-reveal>
+        <div class="section-kicker">Fusion layer</div>
+        <h2>Weighted probabilistic decision</h2>
+        <code>P_text = max(p_body, p_ocr1, ..., p_ocrk)
+P_url  = max(p_url1, ..., p_urln)
+P_header = p_header
+
+P_final = 0.40P_text + 0.40P_url + 0.20P_header</code>
+        <p>Max aggregation prevents one risky link or attachment from being diluted by many clean sections.</p>
+      </div>
+      <div class="thresholds" data-reveal>
+        <div class="threshold"><div class="pill safe">SAFE</div><div><strong>Final score &lt; 0.40</strong><span>Allow or monitor normally.</span></div></div>
+        <div class="threshold"><div class="pill sus">SUSPICIOUS</div><div><strong>0.40 ≤ final score &lt; 0.70</strong><span>Review before delivery or allow manually.</span></div></div>
+        <div class="threshold"><div class="pill mal">MALICIOUS</div><div><strong>Final score ≥ 0.70</strong><span>Block, quarantine, or alert according to policy.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="results">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <div class="section-kicker">Evaluation</div>
+        <h2>Results summary</h2>
+        <p>Classification modules are reported with measured metrics. OCR and QR are reported functionally because they are evidence extraction modules, not final phishing classifiers.</p>
+      </div>
+      <div class="results-grid">
+        <div class="metric" data-reveal><div class="metric-top"><h3>URL Ensemble</h3><div class="value">96.52%</div></div><p>Accuracy with 96.46% macro F1 from the implemented static URL ensemble.</p><div class="bar"><span style="width:96.52%"></span></div></div>
+        <div class="metric" data-reveal><div class="metric-top"><h3>Header Dataset A</h3><div class="value">0.9840</div></div><p>Random Forest accuracy; F1 0.9614 and AUC 0.9981.</p><div class="bar"><span style="width:98.4%"></span></div></div>
+        <div class="metric" data-reveal><div class="metric-top"><h3>Header Dataset B</h3><div class="value">0.9959</div></div><p>Stacking Ensemble accuracy; F1 0.9945 and AUC 0.9998.</p><div class="bar"><span style="width:99.59%"></span></div></div>
+        <div class="metric" data-reveal><div class="metric-top"><h3>English BERT</h3><div class="value">0.9450</div></div><p>Held-out body classification metrics on 15,000 balanced samples.</p><div class="bar"><span style="width:94.5%"></span></div></div>
+        <div class="metric" data-reveal><div class="metric-top"><h3>Real Arabic</h3><div class="value">0.9228</div></div><p>Accuracy after translation, with reported F1 around 0.92.</p><div class="bar"><span style="width:92.28%"></span></div></div>
+        <div class="metric" data-reveal><div class="metric-top"><h3>Arabic Round-trip</h3><div class="value">0.963</div></div><p>Accuracy with F1 0.9631 in the round-trip translation experiment.</p><div class="bar"><span style="width:96.3%"></span></div></div>
+        <div class="metric note-card" data-reveal><h3>OCR / QR evidence extraction</h3><p>Validated by functional tests: attachment discovery, PDF URI extraction, page/image OCR conversion, QR payload decoding, cleaned Markdown output, and dashboard-ready evidence JSON. No unsupported OCR accuracy or QR reliability benchmark is claimed.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="dashboard">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <div class="section-kicker">Product view</div>
+        <h2>Explainable admin dashboard</h2>
+        <p>The dashboard turns model outputs into operational visibility: email status, model scores, evidence traceability, health checks, automation state, and final pass/block decisions.</p>
+      </div>
+      <div class="dashboard-gallery">
+        <figure class="dashboard-shot" data-reveal>
+          <img src="assets/dashboard_real.png" alt="Real PhishTank dashboard overview showing email counts, automation status, system health, detection trend, and decision distribution" />
+          <figcaption class="dashboard-caption">Actual dashboard overview used in the project, showing synced email counts, readiness status, automation controls, detection trend, and decision distribution.</figcaption>
+        </figure>
+        <figure class="dashboard-shot" data-reveal>
+          <img src="assets/dashboard_emails.png" alt="Real PhishTank dashboard email details view showing the inbox list, selected message details, body preview, URLs, attachments, OCR evidence, and module scores" />
+          <figcaption class="dashboard-caption">Email investigation view from the real dashboard, where the analyst can inspect the inbox list, selected message details, body preview, URLs, attachments, OCR evidence, and module-level results.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <div class="section-kicker">Technologies</div>
+        <h2>Built as distributed Python services</h2>
+        <p>FastAPI exposes model and parser services, Streamlit provides the analyst-facing dashboard, and JSON connects all modules through a shared evidence contract.</p>
+      </div>
+      <div class="tech-grid" data-reveal>
+        <span class="tech">Python</span><span class="tech">FastAPI</span><span class="tech">Streamlit</span><span class="tech">IMAP</span><span class="tech">JSON</span><span class="tech">PyTorch</span><span class="tech">Hugging Face</span><span class="tech">BERT</span><span class="tech">NLLB-200</span><span class="tech">Scikit-learn</span><span class="tech">DeepSeek-OCR-2</span><span class="tech">OpenCV</span><span class="tech">PyMuPDF</span><span class="tech">pdf2image</span><span class="tech">LIME</span><span class="tech">Weighted Fusion</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <h2>PhishTank</h2>
+        <p>AI-enhanced multi-layer phishing email detection for modern attack surfaces: body text, URLs, headers, attachments, OCR-hidden text, PDF links, and QR codes.</p>
+        <p class="mini">Graduation project — Networks & Cyber Security. Supervised by Dr. Dina Tarek.</p>
+      </div>
+      <div class="footer-card">
+        <strong>Core contribution</strong>
+        <p>PhishTank does not rely on one detector. It extracts evidence, routes it to specialized models, fuses probabilities, and gives admins an explainable final decision.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const revealEls = document.querySelectorAll('[data-reveal]');
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('show');
+      });
+    }, { threshold: 0.12 });
+    revealEls.forEach(el => io.observe(el));
+  </script>
+</body>
+</html>
